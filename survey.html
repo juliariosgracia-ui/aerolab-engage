@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aerolab · Engagement Survey</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; background: #2A2823; color: #FCFCFC; font-family: 'Plus Jakarta Sans', sans-serif; }
+    .app { max-width: 600px; margin: 0 auto; padding: 0 0 80px; min-height: 100vh; }
+    .nav { display: flex; align-items: center; padding: 28px 28px 0; gap: 10px; }
+    .nav-label { font-size: 11px; letter-spacing: 0.12em; color: #93928F; text-transform: uppercase; font-weight: 500; }
+    .progress-meta { display: flex; justify-content: space-between; padding: 24px 28px 0; }
+    .progress-count { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #54524E; }
+    .progress-track { height: 3px; background: rgba(252,252,252,0.08); border-radius: 2px; margin: 8px 28px 0; }
+    .progress-fill { height: 100%; background: #FF5005; border-radius: 2px; transition: width 0.4s ease; }
+    .wrap { padding: 32px 28px 20px; }
+    .dimension-tag { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,80,5,0.12); border: 1px solid rgba(255,80,5,0.25); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600; color: #FF5005; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 20px; }
+    .q-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #54524E; margin-bottom: 10px; }
+    .q-text { font-size: 22px; font-weight: 700; line-height: 1.3; margin-bottom: 32px; }
+    .scale-labels { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .scale-label { font-size: 10px; color: #54524E; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+    .scale-btns { display: flex; gap: 8px; margin-bottom: 32px; }
+    .scale-btn { flex: 1; height: 52px; border-radius: 8px; border: 1px solid rgba(252,252,252,0.1); background: rgba(252,252,252,0.04); cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 17px; font-weight: 700; color: #93928F; transition: all 0.18s; }
+    .scale-btn:hover { border-color: rgba(255,80,5,0.4); color: #FF5005; background: rgba(255,80,5,0.06); }
+    .scale-btn.selected { background: #FF5005; border-color: #FF5005; color: #FCFCFC; }
+    .optional-label { font-size: 11px; color: #54524E; margin-bottom: 8px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 500; }
+    .optional-input { width: 100%; background: rgba(252,252,252,0.04); border: 1px solid rgba(252,252,252,0.1); border-radius: 8px; padding: 12px 14px; color: #FCFCFC; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; resize: none; min-height: 80px; margin-bottom: 24px; transition: border 0.18s; }
+    .optional-input:focus { outline: none; border-color: rgba(255,80,5,0.4); }
+    .optional-input::placeholder { color: #54524E; }
+    .nav-btns { display: flex; gap: 10px; }
+    .btn-prev { background: transparent; border: 1px solid rgba(252,252,252,0.12); color: #93928F; padding: 12px 20px; border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.18s; }
+    .btn-prev:hover { border-color: rgba(252,252,252,0.3); color: #FCFCFC; }
+    .btn-next { background: #FF5005; border: none; color: #FCFCFC; padding: 12px 24px; border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.18s; }
+    .btn-next:hover { background: #E0440A; }
+    .btn-next:disabled { background: rgba(255,80,5,0.2); cursor: not-allowed; color: rgba(252,252,252,0.3); }
+    .welcome-wrap { padding: 48px 28px; }
+    .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FF5005; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+    .welcome-title { font-size: 38px; font-weight: 800; line-height: 1.1; margin-bottom: 16px; }
+    .welcome-title span { color: #FF5005; }
+    .welcome-desc { font-size: 15px; line-height: 1.7; color: #93928F; margin-bottom: 32px; }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 36px; }
+    .pill { background: rgba(252,252,252,0.05); border: 1px solid rgba(252,252,252,0.1); border-radius: 20px; padding: 5px 14px; font-size: 12px; color: #DFDFDE; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .btn-start { background: #FF5005; border: none; color: #FCFCFC; padding: 16px 32px; border-radius: 10px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn-start:hover { background: #E0440A; transform: translateY(-1px); }
+    .anon-note { font-size: 11px; color: #54524E; margin-top: 14px; display: flex; align-items: center; gap: 6px; }
+    .thanks-wrap { padding: 80px 28px; text-align: center; }
+    .thanks-logo { display: flex; justify-content: center; margin-bottom: 24px; }
+    .thanks-title { font-size: 30px; font-weight: 800; margin-bottom: 12px; }
+    .thanks-sub { font-size: 14px; color: #93928F; line-height: 1.7; }
+    .spinner { width: 32px; height: 32px; border: 2px solid rgba(252,252,252,0.1); border-top-color: #FF5005; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 80px auto 16px; }
+    .spinner-text { text-align: center; font-size: 13px; color: #54524E; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="app" id="root"></div>
+<script>
+const SUPABASE_URL = 'https://ayddgeuiebhfcqaejowc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_eB5HYJg7ug1dBmNlDqIefQ_UA5XjsKH';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const ROUND = 'Q1-2025';
+
+const LOGO_SM = `<svg width="22" height="19" viewBox="0 0 20.74 17.96" xmlns="http://www.w3.org/2000/svg"><path d="M11.59,17.32c-1.11.62-2.39.78-3.52.54-2.72-.58-4.3-2.79-4.71-5.97-.16-1.25-.32-2.69-.87-3.9-.43-.97-1.14-1.77-2.35-2.09-.09-.02-.15-.12-.13-.21.08-.38.28-1.3.36-1.69,0-.05.04-.09.08-.11.04-.03.09-.03.14-.02,1.97.48,3.12,1.72,3.81,3.27.62,1.39.85,3.05,1.03,4.49.27,2.17,1.21,3.8,3.07,4.2.73.15,1.56.03,2.25-.43.07-.05.1-.13.07-.21-.4-1.08-3.16-8.68-3.56-9.78-.03-.08,0-.16.07-.21C8.25,4.6,14.26.7,15.29.03c.08-.05.19-.03.25.05.67,1.03,4.58,7.03,5.18,7.95.05.07.04.16-.02.22-.89.92-7.52,7.76-7.52,7.76,0,0,0,0,0,0-.27.28-.91.92-1.57,1.29Z" fill="#ff5005" fill-rule="evenodd"/></svg>`;
+const LOGO_LG = `<svg width="52" height="45" viewBox="0 0 20.74 17.96" xmlns="http://www.w3.org/2000/svg"><path d="M11.59,17.32c-1.11.62-2.39.78-3.52.54-2.72-.58-4.3-2.79-4.71-5.97-.16-1.25-.32-2.69-.87-3.9-.43-.97-1.14-1.77-2.35-2.09-.09-.02-.15-.12-.13-.21.08-.38.28-1.3.36-1.69,0-.05.04-.09.08-.11.04-.03.09-.03.14-.02,1.97.48,3.12,1.72,3.81,3.27.62,1.39.85,3.05,1.03,4.49.27,2.17,1.21,3.8,3.07,4.2.73.15,1.56.03,2.25-.43.07-.05.1-.13.07-.21-.4-1.08-3.16-8.68-3.56-9.78-.03-.08,0-.16.07-.21C8.25,4.6,14.26.7,15.29.03c.08-.05.19-.03.25.05.67,1.03,4.58,7.03,5.18,7.95.05.07.04.16-.02.22-.89.92-7.52,7.76-7.52,7.76,0,0,0,0,0,0-.27.28-.91.92-1.57,1.29Z" fill="#ff5005" fill-rule="evenodd"/></svg>`;
+
+const DIMENSIONS = [
+  { id: 'bienestar',    name: 'Bienestar',       color: '#FF5005' },
+  { id: 'liderazgo',   name: 'Liderazgo',        color: '#5B8FF9' },
+  { id: 'claridad',    name: 'Claridad & Foco',  color: '#0FA05C' },
+  { id: 'pertenencia', name: 'Pertenencia',       color: '#B3CDFE' },
+  { id: 'crecimiento', name: 'Crecimiento',       color: '#FFCCC9' },
+];
+
+const QUESTIONS = [
+  { dim: 'bienestar',    text: 'Me siento con energía y motivación para afrontar mis responsabilidades diarias.' },
+  { dim: 'bienestar',    text: 'Siento que tengo un balance saludable entre mi trabajo y mi vida personal.' },
+  { dim: 'bienestar',    text: 'Me siento psicológicamente seguro/a para expresar mis ideas y preocupaciones en el equipo.' },
+  { dim: 'liderazgo',   text: 'Mi manager me brinda el contexto y el apoyo que necesito para hacer mi mejor trabajo.' },
+  { dim: 'liderazgo',   text: 'Recibo feedback claro y constructivo que me ayuda a crecer en mi rol.' },
+  { dim: 'liderazgo',   text: 'Siento que el liderazgo de Aerolab toma decisiones de manera transparente y consistente.' },
+  { dim: 'claridad',    text: 'Entiendo claramente cómo mi trabajo contribuye a los objetivos generales de Aerolab.' },
+  { dim: 'claridad',    text: 'Las prioridades del equipo están bien definidas y no cambian de manera impredecible.' },
+  { dim: 'claridad',    text: 'Cuento con los recursos y las herramientas necesarias para hacer mi trabajo de manera efectiva.' },
+  { dim: 'pertenencia', text: 'Me siento parte de un equipo donde mis ideas y perspectivas son valoradas.' },
+  { dim: 'pertenencia', text: 'Siento que en Aerolab me tratan con equidad y respeto, independientemente de mi rol o antigüedad.' },
+  { dim: 'pertenencia', text: 'Recomendaría Aerolab como un excelente lugar para trabajar a alguien de mi confianza.' },
+  { dim: 'crecimiento', text: 'Veo oportunidades concretas para aprender y avanzar en mi carrera dentro de Aerolab.' },
+  { dim: 'crecimiento', text: 'El trabajo que hago a diario me desafía y me ayuda a desarrollar nuevas habilidades.' },
+  { dim: 'crecimiento', text: 'Siento que Aerolab invierte genuinamente en mi desarrollo profesional y personal.' },
+];
+
+let state = { view: 'welcome', currentQ: 0, answers: {}, comments: {} };
+
+function isLastInDim(i) {
+  const dim = QUESTIONS[i].dim;
+  return i === QUESTIONS.map((q,j) => q.dim===dim ? j : -1).filter(j=>j>=0).pop();
+}
+
+async function submitToSupabase() {
+  const { data: res, error } = await db.from('survey_responses').insert({ round: ROUND }).select().single();
+  if (error) throw error;
+  const rid = res.id;
+  await db.from('survey_answers').insert(
+    Object.entries(state.answers).map(([idx, value]) => ({
+      response_id: rid, question_index: parseInt(idx), dimension: QUESTIONS[idx].dim, value
+    }))
+  );
+  await db.from('survey_scores').insert(
+    DIMENSIONS.map(dim => {
+      const vals = QUESTIONS.map((q,i) => q.dim===dim.id ? state.answers[i] : null).filter(v=>v!=null);
+      return { response_id: rid, dimension: dim.id, score: vals.reduce((a,b)=>a+b,0)/vals.length };
+    })
+  );
+  const commentRows = Object.entries(state.comments)
+    .filter(([_,t]) => t?.trim())
+    .map(([idx, comment]) => ({ response_id: rid, dimension: QUESTIONS[idx].dim, comment }));
+  if (commentRows.length) await db.from('survey_comments').insert(commentRows);
+}
+
+function nav() {
+  return `<div class="nav">${LOGO_SM}<span style="font-weight:800;font-size:15px;margin-left:2px">Aerolab</span><span class="nav-label">· Engage</span></div>`;
+}
+
+function render() {
+  const root = document.getElementById('root');
+  if (state.view === 'welcome') {
+    root.innerHTML = nav() + `<div class="welcome-wrap">
+      <div class="eyebrow">Engagement Survey · ${ROUND}</div>
+      <div class="welcome-title">¿Cómo estás <span>realmente</span>?</div>
+      <div class="welcome-desc">Esta encuesta es 100% anónima. Nos ayuda a entender cómo se siente el equipo en 5 dimensiones clave y tomar decisiones que importen.</div>
+      <div class="pills">
+        ${DIMENSIONS.map(d=>`<div class="pill"><div class="dot" style="background:${d.color}"></div>${d.name}</div>`).join('')}
+      </div>
+      <button class="btn-start" onclick="go('survey')">
+        Empezar encuesta
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="anon-note">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#54524E" stroke-width="1.2"/><path d="M6 5.5V8M6 4h.01" stroke="#54524E" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Anónima · ~5 min · 15 preguntas
+      </div>
+    </div>`;
+  } else if (state.view === 'survey') {
+    const q = QUESTIONS[state.currentQ];
+    const dim = DIMENSIONS.find(d=>d.id===q.dim);
+    const pct = (state.currentQ / QUESTIONS.length) * 100;
+    const ans = state.answers[state.currentQ];
+    const isLast = state.currentQ === QUESTIONS.length - 1;
+    root.innerHTML = nav() + `
+      <div class="progress-meta">
+        <div class="progress-count">${state.currentQ+1} / ${QUESTIONS.length}</div>
+        <div class="progress-count">${Math.round(pct)}%</div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="wrap">
+        <div class="dimension-tag"><div class="dot" style="background:${dim.color}"></div>${dim.name}</div>
+        <div class="q-num">Pregunta ${state.currentQ+1}</div>
+        <div class="q-text">${q.text}</div>
+        <div class="scale-labels"><div class="scale-label">En desacuerdo</div><div class="scale-label">De acuerdo</div></div>
+        <div class="scale-btns">
+          ${[1,2,3,4,5].map(v=>`<button class="scale-btn ${ans===v?'selected':''}" style="${ans===v?`background:${dim.color};border-color:${dim.color}`:''}" onclick="selectAnswer(${v})">${v}</button>`).join('')}
+        </div>
+        ${isLastInDim(state.currentQ) ? `
+          <div class="optional-label">¿Algo sobre ${dim.name.toLowerCase()}? (opcional)</div>
+          <textarea class="optional-input" placeholder="Escribí acá..." oninput="saveComment(this.value)">${state.comments[state.currentQ]||''}</textarea>
+        ` : ''}
+        <div class="nav-btns">
+          ${state.currentQ > 0 ? `<button class="btn-prev" onclick="prevQ()">← Anterior</button>` : ''}
+          <button class="btn-next" onclick="${isLast?'doSubmit()':'nextQ()'}" ${!ans?'disabled':''}>${isLast?'Enviar encuesta ✓':'Siguiente →'}</button>
+        </div>
+      </div>`;
+  } else if (state.view === 'submitting') {
+    root.innerHTML = nav() + `<div class="spinner"></div><div class="spinner-text">Guardando tus respuestas...</div>`;
+  } else if (state.view === 'thanks') {
+    root.innerHTML = nav() + `<div class="thanks-wrap">
+      <div class="thanks-logo">${LOGO_LG}</div>
+      <div class="thanks-title">¡Gracias por tu honestidad!</div>
+      <div class="thanks-sub">Tu feedback ayuda a construir un Aerolab mejor para todos.<br>Los resultados estarán disponibles pronto.</div>
+    </div>`;
+  }
+}
+
+function go(v) { state.view = v; render(); }
+function selectAnswer(val) { state.answers[state.currentQ] = val; render(); }
+function saveComment(val) { state.comments[state.currentQ] = val; }
+function nextQ() { if (state.currentQ < QUESTIONS.length-1) { state.currentQ++; render(); } }
+function prevQ() { if (state.currentQ > 0) { state.currentQ--; render(); } }
+async function doSubmit() {
+  state.view = 'submitting'; render();
+  try { await submitToSupabase(); state.view = 'thanks'; }
+  catch(e) { console.error(e); state.view = 'survey'; alert('Error al guardar. Intentá de nuevo.'); }
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
