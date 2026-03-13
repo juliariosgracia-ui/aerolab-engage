@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aerolab · Engage</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; background: #2A2823; color: #FCFCFC; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+    .app { max-width: 640px; margin: 0 auto; padding: 0 0 60px; min-height: 100vh; }
+
+    /* NAV */
+    .nav { display: flex; align-items: center; justify-content: space-between; padding: 24px 28px 0; }
+    .nav-logo { display: flex; align-items: center; gap: 9px; }
+    .nav-logo span { font-weight: 800; font-size: 15px; letter-spacing: -0.01em; }
+    .nav-label { font-size: 11px; letter-spacing: 0.12em; color: #93928F; text-transform: uppercase; font-weight: 500; margin-left: 2px; }
+    .tab-bar { display: flex; gap: 4px; background: rgba(252,252,252,0.06); border-radius: 8px; padding: 4px; }
+    .tab { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: #93928F; letter-spacing: 0.04em; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.2s; }
+    .tab.active { background: #FF5005; color: #FCFCFC; }
+
+    /* PROGRESS */
+    .progress-meta { display: flex; justify-content: space-between; padding: 20px 28px 0; }
+    .progress-count { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #54524E; }
+    .progress-track { height: 3px; background: rgba(252,252,252,0.08); border-radius: 2px; margin: 8px 28px 0; }
+    .progress-fill { height: 100%; background: #FF5005; border-radius: 2px; transition: width 0.4s ease; }
+
+    /* SURVEY */
+    .survey-wrap { padding: 28px 28px 20px; }
+    .dimension-tag { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,80,5,0.12); border: 1px solid rgba(255,80,5,0.25); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600; color: #FF5005; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 20px; }
+    .q-number { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #54524E; margin-bottom: 10px; letter-spacing: 0.06em; }
+    .q-text { font-size: 22px; font-weight: 700; line-height: 1.3; color: #FCFCFC; margin-bottom: 32px; }
+    .scale-labels { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .scale-label { font-size: 10px; color: #54524E; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+    .scale-btns { display: flex; gap: 8px; margin-bottom: 32px; }
+    .scale-btn { flex: 1; height: 52px; border-radius: 8px; border: 1px solid rgba(252,252,252,0.1); background: rgba(252,252,252,0.04); cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 17px; font-weight: 700; color: #93928F; transition: all 0.18s; }
+    .scale-btn:hover { border-color: rgba(255,80,5,0.4); color: #FF5005; background: rgba(255,80,5,0.06); }
+    .scale-btn.selected { background: #FF5005; border-color: #FF5005; color: #FCFCFC; }
+    .optional-label { font-size: 11px; color: #54524E; margin-bottom: 8px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 500; }
+    .optional-input { width: 100%; background: rgba(252,252,252,0.04); border: 1px solid rgba(252,252,252,0.1); border-radius: 8px; padding: 12px 14px; color: #FCFCFC; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; resize: none; min-height: 80px; margin-bottom: 24px; transition: border 0.18s; }
+    .optional-input:focus { outline: none; border-color: rgba(255,80,5,0.4); }
+    .optional-input::placeholder { color: #54524E; }
+    .nav-btns { display: flex; gap: 10px; align-items: center; }
+    .btn-prev { background: transparent; border: 1px solid rgba(252,252,252,0.12); color: #93928F; padding: 12px 20px; border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.18s; }
+    .btn-prev:hover { border-color: rgba(252,252,252,0.3); color: #FCFCFC; }
+    .btn-next { background: #FF5005; border: none; color: #FCFCFC; padding: 12px 24px; border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 0.02em; transition: all 0.18s; }
+    .btn-next:hover { background: #E0440A; }
+    .btn-next:disabled { background: rgba(255,80,5,0.2); cursor: not-allowed; color: rgba(252,252,252,0.3); }
+
+    /* WELCOME */
+    .welcome-wrap { padding: 40px 28px; }
+    .welcome-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FF5005; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+    .welcome-title { font-size: 36px; font-weight: 800; line-height: 1.1; margin-bottom: 16px; }
+    .welcome-title span { color: #FF5005; }
+    .welcome-desc { font-size: 15px; line-height: 1.7; color: #93928F; margin-bottom: 32px; }
+    .dimension-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 36px; }
+    .dim-pill { background: rgba(252,252,252,0.05); border: 1px solid rgba(252,252,252,0.1); border-radius: 20px; padding: 5px 14px; font-size: 12px; color: #DFDFDE; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    .dim-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .btn-start { background: #FF5005; border: none; color: #FCFCFC; padding: 16px 32px; border-radius: 10px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn-start:hover { background: #E0440A; transform: translateY(-1px); }
+    .anon-note { font-size: 11px; color: #54524E; margin-top: 14px; display: flex; align-items: center; gap: 6px; }
+
+    /* THANKS */
+    .thanks-wrap { padding: 64px 28px; text-align: center; }
+    .thanks-logo { display: flex; justify-content: center; margin-bottom: 24px; }
+    .thanks-title { font-size: 30px; font-weight: 800; margin-bottom: 10px; }
+    .thanks-sub { font-size: 14px; color: #93928F; margin-bottom: 28px; line-height: 1.6; }
+    .btn-dash { background: transparent; border: 1px solid rgba(255,80,5,0.4); color: #FF5005; padding: 12px 24px; border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .btn-dash:hover { background: rgba(255,80,5,0.1); }
+
+    /* DASHBOARD */
+    .dash-wrap { padding: 28px 28px; }
+    .dash-title { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+    .dash-sub { font-size: 12px; color: #93928F; margin-bottom: 24px; font-family: 'JetBrains Mono', monospace; }
+    .metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 24px; }
+    .metric-card { background: rgba(252,252,252,0.05); border: 1px solid rgba(252,252,252,0.08); border-radius: 10px; padding: 14px 16px; }
+    .metric-label { font-size: 10px; color: #54524E; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
+    .metric-value { font-size: 26px; font-weight: 800; }
+    .metric-value.orange { color: #FF5005; }
+    .metric-value.blue { color: #5B8FF9; }
+    .section-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #54524E; font-weight: 600; margin-bottom: 12px; }
+    .dim-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .dim-row { background: rgba(252,252,252,0.04); border-radius: 10px; padding: 14px 16px; border: 1px solid rgba(252,252,252,0.07); }
+    .dim-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .dim-name { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .bar-track { height: 6px; background: rgba(252,252,252,0.07); border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+    .score-badge { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+    .score-mono { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; }
+    .feedback-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+    .feedback-item { background: rgba(252,252,252,0.04); border-left: 2px solid #FF5005; border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 12px; color: #DFDFDE; line-height: 1.6; font-style: italic; }
+    .divider { height: 1px; background: rgba(252,252,252,0.06); margin: 20px 0; }
+
+    /* LOADING */
+    .loading-wrap { padding: 80px 28px; text-align: center; }
+    .spinner { width: 32px; height: 32px; border: 2px solid rgba(252,252,252,0.1); border-top-color: #FF5005; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 13px; color: #54524E; }
+    .error-wrap { padding: 40px 28px; text-align: center; }
+    .error-text { font-size: 14px; color: #E2373C; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+<div class="app" id="root"></div>
+
+<script>
+// ─── CONFIGURACIÓN SUPABASE ────────────────────────────────────────────────
+const SUPABASE_URL = 'https://ayddgeuiebhfcqaejowc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_eB5HYJg7ug1dBmNlDqIefQ_UA5XjsKH';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── DATOS ────────────────────────────────────────────────────────────────
+const ROUND = 'Q1-2025';
+
+const DIMENSIONS = [
+  { id: 'bienestar',    name: 'Bienestar',       color: '#FF5005' },
+  { id: 'liderazgo',   name: 'Liderazgo',        color: '#5B8FF9' },
+  { id: 'claridad',    name: 'Claridad & Foco',  color: '#0FA05C' },
+  { id: 'pertenencia', name: 'Pertenencia',       color: '#B3CDFE' },
+  { id: 'crecimiento', name: 'Crecimiento',       color: '#FFCCC9' },
+];
+
+const QUESTIONS = [
+  { dim: 'bienestar',    text: 'Me siento con energía y motivación para afrontar mis responsabilidades diarias.' },
+  { dim: 'bienestar',    text: 'Siento que tengo un balance saludable entre mi trabajo y mi vida personal.' },
+  { dim: 'bienestar',    text: 'Me siento psicológicamente seguro/a para expresar mis ideas y preocupaciones en el equipo.' },
+  { dim: 'liderazgo',   text: 'Mi manager me brinda el contexto y el apoyo que necesito para hacer mi mejor trabajo.' },
+  { dim: 'liderazgo',   text: 'Recibo feedback claro y constructivo que me ayuda a crecer en mi rol.' },
+  { dim: 'liderazgo',   text: 'Siento que el liderazgo de Aerolab toma decisiones de manera transparente y consistente.' },
+  { dim: 'claridad',    text: 'Entiendo claramente cómo mi trabajo contribuye a los objetivos generales de Aerolab.' },
+  { dim: 'claridad',    text: 'Las prioridades del equipo están bien definidas y no cambian de manera impredecible.' },
+  { dim: 'claridad',    text: 'Cuento con los recursos y las herramientas necesarias para hacer mi trabajo de manera efectiva.' },
+  { dim: 'pertenencia', text: 'Me siento parte de un equipo donde mis ideas y perspectivas son valoradas.' },
+  { dim: 'pertenencia', text: 'Siento que en Aerolab me tratan con equidad y respeto, independientemente de mi rol o antigüedad.' },
+  { dim: 'pertenencia', text: 'Recomendaría Aerolab como un excelente lugar para trabajar a alguien de mi confianza.' },
+  { dim: 'crecimiento', text: 'Veo oportunidades concretas para aprender y avanzar en mi carrera dentro de Aerolab.' },
+  { dim: 'crecimiento', text: 'El trabajo que hago a diario me desafía y me ayuda a desarrollar nuevas habilidades.' },
+  { dim: 'crecimiento', text: 'Siento que Aerolab invierte genuinamente en mi desarrollo profesional y personal.' },
+];
+
+// ─── LOGO SVG ─────────────────────────────────────────────────────────────
+const LOGO_SM = `<svg width="22" height="19" viewBox="0 0 20.74 17.96" xmlns="http://www.w3.org/2000/svg"><path d="M11.59,17.32c-1.11.62-2.39.78-3.52.54-2.72-.58-4.3-2.79-4.71-5.97-.16-1.25-.32-2.69-.87-3.9-.43-.97-1.14-1.77-2.35-2.09-.09-.02-.15-.12-.13-.21.08-.38.28-1.3.36-1.69,0-.05.04-.09.08-.11.04-.03.09-.03.14-.02,1.97.48,3.12,1.72,3.81,3.27.62,1.39.85,3.05,1.03,4.49.27,2.17,1.21,3.8,3.07,4.2.73.15,1.56.03,2.25-.43.07-.05.1-.13.07-.21-.4-1.08-3.16-8.68-3.56-9.78-.03-.08,0-.16.07-.21C8.25,4.6,14.26.7,15.29.03c.08-.05.19-.03.25.05.67,1.03,4.58,7.03,5.18,7.95.05.07.04.16-.02.22-.89.92-7.52,7.76-7.52,7.76,0,0,0,0,0,0-.27.28-.91.92-1.57,1.29Z" fill="#ff5005" fill-rule="evenodd"/></svg>`;
+const LOGO_LG = `<svg width="52" height="45" viewBox="0 0 20.74 17.96" xmlns="http://www.w3.org/2000/svg"><path d="M11.59,17.32c-1.11.62-2.39.78-3.52.54-2.72-.58-4.3-2.79-4.71-5.97-.16-1.25-.32-2.69-.87-3.9-.43-.97-1.14-1.77-2.35-2.09-.09-.02-.15-.12-.13-.21.08-.38.28-1.3.36-1.69,0-.05.04-.09.08-.11.04-.03.09-.03.14-.02,1.97.48,3.12,1.72,3.81,3.27.62,1.39.85,3.05,1.03,4.49.27,2.17,1.21,3.8,3.07,4.2.73.15,1.56.03,2.25-.43.07-.05.1-.13.07-.21-.4-1.08-3.16-8.68-3.56-9.78-.03-.08,0-.16.07-.21C8.25,4.6,14.26.7,15.29.03c.08-.05.19-.03.25.05.67,1.03,4.58,7.03,5.18,7.95.05.07.04.16-.02.22-.89.92-7.52,7.76-7.52,7.76,0,0,0,0,0,0-.27.28-.91.92-1.57,1.29Z" fill="#ff5005" fill-rule="evenodd"/></svg>`;
+
+// ─── ESTADO ───────────────────────────────────────────────────────────────
+let state = {
+  view: 'welcome',   // welcome | survey | submitting | thanks | dashboard | loading-dash
+  currentQ: 0,
+  answers: {},
+  comments: {},
+  dashData: null,
+};
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────
+function getDimScore(dimId, answers) {
+  const vals = QUESTIONS.map((q, i) => q.dim === dimId ? (answers[i] || null) : null).filter(v => v !== null);
+  if (!vals.length) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+function scoreColor(s) { return s >= 4.2 ? '#0FA05C' : s >= 3.2 ? '#FF5005' : '#E2373C'; }
+function scoreLabel(s) { return s >= 4.2 ? 'Alto' : s >= 3.2 ? 'Medio' : 'Bajo'; }
+function isLastInDim(qIndex) {
+  const dim = QUESTIONS[qIndex].dim;
+  const last = QUESTIONS.map((q, i) => q.dim === dim ? i : -1).filter(i => i >= 0).pop();
+  return qIndex === last;
+}
+
+// ─── SUPABASE: SUBMIT ─────────────────────────────────────────────────────
+async function submitToSupabase() {
+  // 1. Crear respuesta principal
+  const { data: response, error } = await db
+    .from('survey_responses')
+    .insert({ round: ROUND })
+    .select()
+    .single();
+  if (error) throw error;
+  const rid = response.id;
+
+  // 2. Respuestas individuales
+  const answerRows = Object.entries(state.answers).map(([idx, value]) => ({
+    response_id: rid,
+    question_index: parseInt(idx),
+    dimension: QUESTIONS[idx].dim,
+    value
+  }));
+  await db.from('survey_answers').insert(answerRows);
+
+  // 3. Scores por dimensión
+  const scoreRows = DIMENSIONS.map(dim => {
+    const vals = QUESTIONS.map((q, i) => q.dim === dim.id ? state.answers[i] : null).filter(v => v != null);
+    const score = vals.reduce((a, b) => a + b, 0) / vals.length;
+    return { response_id: rid, dimension: dim.id, score };
+  });
+  await db.from('survey_scores').insert(scoreRows);
+
+  // 4. Comentarios opcionales
+  const commentRows = Object.entries(state.comments)
+    .filter(([_, t]) => t?.trim())
+    .map(([idx, comment]) => ({ response_id: rid, dimension: QUESTIONS[idx].dim, comment }));
+  if (commentRows.length > 0) await db.from('survey_comments').insert(commentRows);
+}
+
+// ─── SUPABASE: FETCH DASHBOARD ────────────────────────────────────────────
+async function fetchDashboard() {
+  const [scoresRes, responsesRes, commentsRes, answersRes] = await Promise.all([
+    db.from('survey_scores').select('dimension, score').eq('dimension', 'bienestar').neq('score', null),
+    db.from('survey_responses').select('id').eq('round', ROUND),
+    db.from('survey_comments').select('comment').limit(4),
+    db.from('survey_answers').select('value').eq('question_index', 11),
+  ]);
+
+  // Scores por dimensión: fetch all
+  const { data: allScores } = await db.from('survey_scores').select('dimension, score');
+  const dimAverages = {};
+  if (allScores) {
+    DIMENSIONS.forEach(d => {
+      const vals = allScores.filter(s => s.dimension === d.id).map(s => parseFloat(s.score));
+      dimAverages[d.id] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    });
+  }
+
+  // eNPS
+  let enps = null;
+  if (answersRes.data && answersRes.data.length > 0) {
+    const vals = answersRes.data.map(r => r.value);
+    const promoters = vals.filter(v => v === 5).length;
+    const detractors = vals.filter(v => v <= 2).length;
+    enps = Math.round((promoters / vals.length - detractors / vals.length) * 100);
+  }
+
+  return {
+    total: responsesRes.data ? responsesRes.data.length : 0,
+    dimAverages,
+    comments: commentsRes.data ? commentsRes.data.map(c => c.comment) : [],
+    enps,
+  };
+}
+
+// ─── RENDER: NAV ──────────────────────────────────────────────────────────
+function renderNav() {
+  const onSurvey = ['welcome','survey','submitting','thanks'].includes(state.view);
+  return `<div class="nav">
+    <div class="nav-logo">
+      ${LOGO_SM}
+      <span>Aerolab</span>
+      <span class="nav-label">· Engage</span>
+    </div>
+    <div class="tab-bar">
+      <button class="tab ${onSurvey ? 'active' : ''}" onclick="go('welcome')">Encuesta</button>
+      <button class="tab ${!onSurvey ? 'active' : ''}" onclick="goToDash()">Dashboard</button>
+    </div>
+  </div>`;
+}
+
+// ─── RENDER: WELCOME ──────────────────────────────────────────────────────
+function renderWelcome() {
+  return renderNav() + `<div class="welcome-wrap">
+    <div class="welcome-eyebrow">Engagement Survey · ${ROUND}</div>
+    <div class="welcome-title">¿Cómo estás <span>realmente</span>?</div>
+    <div class="welcome-desc">Esta encuesta es 100% anónima. Nos ayuda a entender cómo se siente el equipo en 5 dimensiones clave y a tomar decisiones que importen.</div>
+    <div class="dimension-pills">
+      ${DIMENSIONS.map(d => `<div class="dim-pill"><div class="dim-dot" style="background:${d.color}"></div>${d.name}</div>`).join('')}
+    </div>
+    <button class="btn-start" onclick="go('survey')">
+      Empezar encuesta
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="anon-note">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#54524E" stroke-width="1.2"/><path d="M6 5.5V8M6 4h.01" stroke="#54524E" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Anónima · ~5 min · 15 preguntas
+    </div>
+  </div>`;
+}
+
+// ─── RENDER: SURVEY ───────────────────────────────────────────────────────
+function renderSurvey() {
+  const q = QUESTIONS[state.currentQ];
+  const dim = DIMENSIONS.find(d => d.id === q.dim);
+  const pct = (state.currentQ / QUESTIONS.length) * 100;
+  const isLast = state.currentQ === QUESTIONS.length - 1;
+  const ans = state.answers[state.currentQ];
+  const comment = state.comments[state.currentQ] || '';
+  const showComment = isLastInDim(state.currentQ);
+
+  return renderNav() + `
+    <div class="progress-meta">
+      <div class="progress-count">${state.currentQ + 1} / ${QUESTIONS.length}</div>
+      <div class="progress-count">${Math.round(pct)}%</div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="survey-wrap">
+      <div class="dimension-tag">
+        <div class="dim-dot" style="background:${dim.color}"></div>
+        ${dim.name}
+      </div>
+      <div class="q-number">Pregunta ${state.currentQ + 1}</div>
+      <div class="q-text">${q.text}</div>
+      <div class="scale-labels">
+        <div class="scale-label">En desacuerdo</div>
+        <div class="scale-label">De acuerdo</div>
+      </div>
+      <div class="scale-btns">
+        ${[1,2,3,4,5].map(v => `<button class="scale-btn ${ans === v ? 'selected' : ''}"
+          style="${ans === v ? `background:${dim.color};border-color:${dim.color}` : ''}"
+          onclick="selectAnswer(${v})">${v}</button>`).join('')}
+      </div>
+      ${showComment ? `
+        <div class="optional-label">¿Algo sobre ${dim.name.toLowerCase()}? (opcional)</div>
+        <textarea class="optional-input" placeholder="Escribí acá..." oninput="saveComment(this.value)">${comment}</textarea>
+      ` : ''}
+      <div class="nav-btns">
+        ${state.currentQ > 0 ? `<button class="btn-prev" onclick="prevQ()">← Anterior</button>` : ''}
+        <button class="btn-next" onclick="${isLast ? 'submitSurvey()' : 'nextQ()'}" ${!ans ? 'disabled' : ''}>
+          ${isLast ? 'Enviar encuesta ✓' : 'Siguiente →'}
+        </button>
+      </div>
+    </div>`;
+}
+
+// ─── RENDER: SUBMITTING ───────────────────────────────────────────────────
+function renderSubmitting() {
+  return renderNav() + `<div class="loading-wrap">
+    <div class="spinner"></div>
+    <div class="loading-text">Guardando tus respuestas...</div>
+  </div>`;
+}
+
+// ─── RENDER: THANKS ───────────────────────────────────────────────────────
+function renderThanks() {
+  return renderNav() + `<div class="thanks-wrap">
+    <div class="thanks-logo">${LOGO_LG}</div>
+    <div class="thanks-title">¡Gracias por tu honestidad!</div>
+    <div class="thanks-sub">Tu feedback ayuda a construir un Aerolab mejor para todos.<br>Los resultados estarán disponibles en el dashboard en 48hs.</div>
+    <button class="btn-dash" onclick="goToDash()">Ver resultados del equipo →</button>
+  </div>`;
+}
+
+// ─── RENDER: LOADING DASHBOARD ────────────────────────────────────────────
+function renderLoadingDash() {
+  return renderNav() + `<div class="loading-wrap">
+    <div class="spinner"></div>
+    <div class="loading-text">Cargando resultados...</div>
+  </div>`;
+}
+
+// ─── RENDER: DASHBOARD ────────────────────────────────────────────────────
+function renderDashboard() {
+  const d = state.dashData;
+  if (!d) return renderLoadingDash();
+
+  const overall = Object.values(d.dimAverages).filter(v => v != null);
+  const overallScore = overall.length ? (overall.reduce((a, b) => a + b, 0) / overall.length).toFixed(1) : '—';
+
+  return renderNav() + `<div class="dash-wrap">
+    <div class="dash-title">Resultados del equipo</div>
+    <div class="dash-sub">${ROUND} · ${d.total} respuesta${d.total !== 1 ? 's' : ''} · En vivo</div>
+
+    <div class="metrics-row">
+      <div class="metric-card">
+        <div class="metric-label">Score general</div>
+        <div class="metric-value orange">${overallScore}<span style="font-size:14px;color:#54524E">/5</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Participación</div>
+        <div class="metric-value">${d.total}<span style="font-size:14px;color:#54524E"> resp.</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">eNPS</div>
+        <div class="metric-value blue">${d.enps !== null ? (d.enps > 0 ? '+' : '') + d.enps : '—'}</div>
+      </div>
+    </div>
+
+    <div class="section-label">Por dimensión</div>
+    <div class="dim-list">
+      ${DIMENSIONS.map(dim => {
+        const s = d.dimAverages[dim.id];
+        const pct = s ? (s / 5 * 100).toFixed(1) : 0;
+        const sc = s ? s.toFixed(1) : '—';
+        return `<div class="dim-row">
+          <div class="dim-top">
+            <div class="dim-name">
+              <div class="dim-dot" style="background:${dim.color}"></div>
+              ${dim.name}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              ${s ? `<div class="score-badge" style="background:${scoreColor(s)}22;color:${scoreColor(s)}">${scoreLabel(s)}</div>` : ''}
+              <div class="score-mono" style="color:${dim.color}">${sc}</div>
+            </div>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${dim.color}"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    ${d.comments.length > 0 ? `
+      <div class="divider"></div>
+      <div class="section-label">Comentarios abiertos</div>
+      <div class="feedback-list">
+        ${d.comments.map(c => `<div class="feedback-item">"${c}"</div>`).join('')}
+      </div>
+    ` : ''}
+
+    <div class="divider"></div>
+    <button class="btn-prev" style="font-size:12px" onclick="goToDash()">↺ Actualizar resultados</button>
+  </div>`;
+}
+
+// ─── ACCIONES ─────────────────────────────────────────────────────────────
+function go(view) {
+  state.view = view;
+  render();
+}
+
+function selectAnswer(val) {
+  state.answers[state.currentQ] = val;
+  render();
+}
+
+function saveComment(val) {
+  state.comments[state.currentQ] = val;
+}
+
+function nextQ() {
+  if (state.currentQ < QUESTIONS.length - 1) { state.currentQ++; render(); }
+}
+
+function prevQ() {
+  if (state.currentQ > 0) { state.currentQ--; render(); }
+}
+
+async function submitSurvey() {
+  state.view = 'submitting';
+  render();
+  try {
+    await submitToSupabase();
+    state.view = 'thanks';
+  } catch (err) {
+    console.error(err);
+    state.view = 'survey';
+    alert('Hubo un error al guardar. Por favor intentá de nuevo.');
+  }
+  render();
+}
+
+async function goToDash() {
+  state.view = 'loading-dash';
+  render();
+  try {
+    state.dashData = await fetchDashboard();
+    state.view = 'dashboard';
+  } catch (err) {
+    console.error(err);
+    state.view = 'dashboard';
+  }
+  render();
+}
+
+// ─── RENDER PRINCIPAL ─────────────────────────────────────────────────────
+function render() {
+  const root = document.getElementById('root');
+  switch (state.view) {
+    case 'welcome':      root.innerHTML = renderWelcome(); break;
+    case 'survey':       root.innerHTML = renderSurvey(); break;
+    case 'submitting':   root.innerHTML = renderSubmitting(); break;
+    case 'thanks':       root.innerHTML = renderThanks(); break;
+    case 'loading-dash': root.innerHTML = renderLoadingDash(); break;
+    case 'dashboard':    root.innerHTML = renderDashboard(); break;
+  }
+}
+
+render();
+</script>
+</body>
+</html>
