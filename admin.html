@@ -151,21 +151,29 @@ function logout() {
 async function loadData() {
   document.getElementById('dash-content').innerHTML = '<div class="spinner"></div><div class="spinner-text">Cargando datos...</div>';
 
-  const [responsesRes, scoresRes, commentsRes, answersRes, allRoundsRes] = await Promise.all([
-    db.from('survey_responses').select('id').eq('round', currentRound),
-    db.from('survey_scores').select('dimension, score, response_id'),
-    db.from('survey_comments').select('comment, dimension').limit(8),
-    db.from('survey_answers').select('value, question_index'),
-    db.from('survey_responses').select('round'),
-  ]);
+  const responsesRes = await db.from('survey_responses').select('id').eq('round', currentRound);
+  const allRoundsRes = await db.from('survey_responses').select('round');
 
   const total = responsesRes.data?.length || 0;
+  const responseIds = (responsesRes.data || []).map(r => r.id);
+  const rounds = [...new Set((allRoundsRes.data||[]).map(r=>r.round))];
+
+  if (!responseIds.length) {
+    const dimData = DIMENSIONS.map(d => ({ ...d, avg: null }));
+    renderDashboard({ total, dimData, overall: null, enps: null, comments: [], alerts: [], rounds });
+    return;
+  }
+
+  const [scoresRes, commentsRes, answersRes] = await Promise.all([
+    db.from('survey_scores').select('dimension, score').in('response_id', responseIds),
+    db.from('survey_comments').select('comment, dimension').in('response_id', responseIds).limit(8),
+    db.from('survey_answers').select('value, question_index').in('response_id', responseIds),
+  ]);
+
   const allScores = scoresRes.data || [];
   const comments = commentsRes.data || [];
   const answers = answersRes.data || [];
-  const rounds = [...new Set((allRoundsRes.data||[]).map(r=>r.round))];
 
-  // Scores por dimensión
   const dimData = DIMENSIONS.map(dim => {
     const vals = allScores.filter(s => s.dimension === dim.id).map(s => parseFloat(s.score));
     const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
@@ -175,7 +183,6 @@ async function loadData() {
   const overallVals = dimData.map(d=>d.avg).filter(v=>v!=null);
   const overall = overallVals.length ? overallVals.reduce((a,b)=>a+b,0)/overallVals.length : null;
 
-  // eNPS (pregunta índice 11)
   const enpsAnswers = answers.filter(a => a.question_index === 11).map(a => a.value);
   let enps = null;
   if (enpsAnswers.length) {
