@@ -115,6 +115,8 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // ← Cambiá esta contraseña antes de compartir el link
 const ADMIN_PASSWORD = 'aerolab2025';
 
+const MIN_RESPONSES = 5; // Mínimo para mostrar datos (protege privacidad)
+
 const DIMENSIONS = [
   { id: 'bienestar',    name: 'Bienestar',      color: '#FF5005' },
   { id: 'liderazgo',   name: 'Liderazgo',       color: '#5B8FF9' },
@@ -197,9 +199,23 @@ async function loadData() {
     .sort((a,b) => a.avg - b.avg);
 
   renderDashboard({ total, dimData, overall, enps, comments, alerts, rounds });
+  setTimeout(() => renderTrendChart(), 100);
 }
 
 function renderDashboard({ total, dimData, overall, enps, comments, alerts, rounds }) {
+  // Threshold check
+  if (total > 0 && total < MIN_RESPONSES) {
+    document.getElementById('dash-content').innerHTML = `<div style="padding:60px 28px;text-align:center">
+      <div style="font-size:32px;margin-bottom:16px">🔒</div>
+      <div style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px">Datos protegidos</div>
+      <div style="font-size:14px;color:var(--color-text-secondary);max-width:360px;margin:0 auto;line-height:1.7">
+        Hay ${total} respuesta${total!==1?'s':''} registrada${total!==1?'s':''}. Se necesitan al menos <strong>${MIN_RESPONSES}</strong> para mostrar los resultados y proteger el anonimato.
+      </div>
+      <div style="margin-top:24px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--color-text-tertiary)">${MIN_RESPONSES - total} respuesta${MIN_RESPONSES-total!==1?'s':''} más para desbloquear</div>
+    </div>`;
+    return;
+  }
+
   const overallStr = overall ? overall.toFixed(1) : '—';
   const enpsStr = enps !== null ? (enps > 0 ? '+' : '') + enps : '—';
 
@@ -320,6 +336,86 @@ function renderDashboard({ total, dimData, overall, enps, comments, alerts, roun
       });
     }
   }
+}
+
+async function exportCSV() {
+  const responsesRes = await db.from('survey_responses').select('id, round, area, nivel, submitted_at').eq('round', currentRound);
+  const scoresRes = await db.from('survey_scores').select('response_id, dimension, score');
+  if (!responsesRes.data) return;
+
+  const scoreMap = {};
+  (scoresRes.data||[]).forEach(s => {
+    if (!scoreMap[s.response_id]) scoreMap[s.response_id] = {};
+    scoreMap[s.response_id][s.dimension] = parseFloat(s.score).toFixed(2);
+  });
+
+  const rows = [['id','round','area','nivel','fecha','bienestar','liderazgo','claridad','pertenencia','crecimiento']];
+  responsesRes.data.forEach(r => {
+    const s = scoreMap[r.id] || {};
+    rows.push([r.id, r.round, r.area||'', r.nivel||'', r.submitted_at?.split('T')[0]||'',
+      s.bienestar||'', s.liderazgo||'', s.claridad||'', s.pertenencia||'', s.crecimiento||'']);
+  });
+
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `aerolab-engage-${currentRound}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+async function renderTrendChart() {
+  const { data: allRounds } = await db.from('survey_responses').select('round');
+  const rounds = [...new Set((allRounds||[]).map(r=>r.round))].sort();
+  if (rounds.length < 2) {
+    const el = document.getElementById('trend-chart');
+    if (el) el.parentElement.innerHTML = '<div style="text-align:center;padding:40px;font-size:12px;color:var(--color-text-tertiary)">Las tendencias se mostrarán cuando haya al menos 2 rondas completadas.</div>';
+    return;
+  }
+
+  const trendData = {};
+  for (const round of rounds) {
+    const { data: rIds } = await db.from('survey_responses').select('id').eq('round', round);
+    if (!rIds?.length) continue;
+    const { data: scores } = await db.from('survey_scores').select('dimension, score').in('response_id', rIds.map(r=>r.id));
+    trendData[round] = {};
+    DIMENSIONS.forEach(d => {
+      const vals = (scores||[]).filter(s=>s.dimension===d.id).map(s=>parseFloat(s.score));
+      trendData[round][d.id] = vals.length ? parseFloat((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2)) : null;
+    });
+  }
+
+  const ctx = document.getElementById('trend-chart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: rounds,
+      datasets: DIMENSIONS.map(d => ({
+        label: d.name,
+        data: rounds.map(r => trendData[r]?.[d.id] || null),
+        borderColor: d.color,
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: d.color,
+        tension: 0.3,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { min: 1, max: 5, ticks: { color: '#54524E', stepSize: 1 }, grid: { color: 'rgba(252,252,252,0.05)' } },
+        x: { ticks: { color: '#54524E' }, grid: { color: 'rgba(252,252,252,0.05)' } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function filterSeg(key, val, btn) {
+  document.querySelectorAll('#seg-filters .round-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
 }
 
 function switchRound(round) {

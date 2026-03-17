@@ -93,7 +93,14 @@ const QUESTIONS = [
   { dim: 'crecimiento', text: 'Siento que Aerolab invierte genuinamente en mi desarrollo profesional y personal.' },
 ];
 
-let state = { view: 'welcome', currentQ: 0, answers: {}, comments: {} };
+let state = {
+  view: 'welcome',
+  currentQ: 0,
+  answers: {},
+  comments: {},
+  segment: { area: null, nivel: null },
+  segmentDone: false,
+};
 
 function isLastInDim(i) {
   const dim = QUESTIONS[i].dim;
@@ -135,13 +142,41 @@ function render() {
       <div class="pills">
         ${DIMENSIONS.map(d=>`<div class="pill"><div class="dot" style="background:${d.color}"></div>${d.name}</div>`).join('')}
       </div>
-      <button class="btn-start" onclick="go('survey')">
+      <button class="btn-start" onclick="go('segment')">
         Empezar encuesta
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div class="anon-note">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#54524E" stroke-width="1.2"/><path d="M6 5.5V8M6 4h.01" stroke="#54524E" stroke-width="1.2" stroke-linecap="round"/></svg>
         Anónima · ~5 min · 15 preguntas
+      </div>
+    </div>`;
+  } else if (state.view === 'segment') {
+    const areas = ['Diseño', 'Branding', 'Desarrollo', 'PMs', 'Partnerships', 'People', 'Finanzas & Admin'];
+    const niveles = ['Junior', 'SSR I', 'SSR II', 'Senior', 'Lead', 'Head / Dir'];
+    root.innerHTML = nav() + `<div class="welcome-wrap" style="padding-top:32px">
+      <div class="eyebrow">Antes de empezar</div>
+      <div class="welcome-title" style="font-size:26px;margin-bottom:12px">Una pregunta rápida</div>
+      <div class="welcome-desc" style="margin-bottom:24px">Estos datos son opcionales y nos ayudan a entender mejor los resultados por equipo. No comprometen tu anonimato.</div>
+      <div style="margin-bottom:20px">
+        <div class="optional-label" style="margin-bottom:10px">¿En qué área trabajás?</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${areas.map(a => `<button onclick="setSegment('area','${a}')" style="padding:8px 14px;border-radius:20px;border:1px solid ${state.segment.area===a?'#FF5005':'rgba(252,252,252,0.12)'};background:${state.segment.area===a?'rgba(255,80,5,0.15)':'transparent'};color:${state.segment.area===a?'#FF5005':'#93928F'};font-family:Plus Jakarta Sans,sans-serif;font-size:12px;font-weight:600;cursor:pointer">${a}</button>`).join('')}
+        </div>
+      </div>
+      <div style="margin-bottom:32px">
+        <div class="optional-label" style="margin-bottom:10px">¿Cuál es tu nivel?</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${niveles.map(n => `<button onclick="setSegment('nivel','${n}')" style="padding:8px 14px;border-radius:20px;border:1px solid ${state.segment.nivel===n?'#FF5005':'rgba(252,252,252,0.12)'};background:${state.segment.nivel===n?'rgba(255,80,5,0.15)':'transparent'};color:${state.segment.nivel===n?'#FF5005':'#93928F'};font-family:Plus Jakarta Sans,sans-serif;font-size:12px;font-weight:600;cursor:pointer">${n}</button>`).join('')}
+        </div>
+      </div>
+      <div class="nav-btns">
+        <button class="btn-prev" onclick="go('welcome')">← Volver</button>
+        <button class="btn-next" onclick="go('survey')" style="opacity:1">Empezar encuesta →</button>
+      </div>
+      <div class="anon-note" style="margin-top:14px">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#54524E" stroke-width="1.2"/><path d="M6 5.5V8M6 4h.01" stroke="#54524E" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Podés saltear estas preguntas — son completamente opcionales
       </div>
     </div>`;
   } else if (state.view === 'survey') {
@@ -185,6 +220,7 @@ function render() {
 }
 
 function go(v) { state.view = v; render(); }
+function setSegment(key, val) { state.segment[key] = val; render(); }
 function selectAnswer(val) { state.answers[state.currentQ] = val; render(); }
 function saveComment(val) { state.comments[state.currentQ] = val; }
 function nextQ() { if (state.currentQ < QUESTIONS.length-1) { state.currentQ++; render(); } }
